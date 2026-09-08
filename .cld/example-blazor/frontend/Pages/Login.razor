@@ -1,0 +1,63 @@
+@page "/login"
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Log in — MyApp</PageTitle>
+
+<div class="max-w-sm mx-auto mt-16">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">Log in</h2>
+
+    @if (error is not null)
+    {
+        <div class="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">@error</div>
+    }
+
+    <EditForm Model="model" OnValidSubmit="HandleSubmit" class="flex flex-col gap-4">
+        <label class="flex flex-col gap-1 text-sm font-medium text-gray-700">
+            Email
+            <InputText @bind-Value="model.Email" type="email"
+                       class="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </label>
+
+        <label class="flex flex-col gap-1 text-sm font-medium text-gray-700">
+            Password
+            <InputText @bind-Value="model.Password" type="password"
+                       class="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </label>
+
+        <button type="submit" disabled="@loading"
+                class="rounded-md bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+            @(loading ? "Logging in…" : "Log in")
+        </button>
+    </EditForm>
+
+    <p class="mt-4 text-center text-sm text-gray-500">
+        No account? <a href="/register" class="text-indigo-600 hover:underline">Register</a>
+    </p>
+</div>
+
+@code {
+    private LoginModel model = new();
+    private string? error;
+    private bool loading;
+
+    private async Task HandleSubmit()
+    {
+        error = null;
+        loading = true;
+        var (ok, msg) = await Auth.LoginAsync(model.Email, model.Password);
+        if (!ok)
+        {
+            error = msg;
+            loading = false;
+            return;
+        }
+        Nav.NavigateTo("/todos");
+    }
+
+    private class LoginModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+}

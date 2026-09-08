@@ -1,0 +1,8 @@
+/* Global overrides — Tailwind handles the rest */
+html, body {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+#blazor-error-ui {
+    display: none;
+}

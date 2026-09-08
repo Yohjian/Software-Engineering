@@ -1,0 +1,82 @@
+@page "/register"
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Register — MyApp</PageTitle>
+
+<div class="max-w-sm mx-auto mt-16">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">Create an account</h2>
+
+    @if (errors.Count > 0)
+    {
+        <div class="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 space-y-1">
+            @foreach (var msg in errors)
+            {
+                <p>@msg</p>
+            }
+        </div>
+    }
+
+    <EditForm Model="model" OnValidSubmit="HandleSubmit" class="flex flex-col gap-4">
+        <DataAnnotationsValidator />
+
+        <label class="flex flex-col gap-1 text-sm font-medium text-gray-700">
+            Email
+            <InputText @bind-Value="model.Email" type="email"
+                       class="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </label>
+
+        <label class="flex flex-col gap-1 text-sm font-medium text-gray-700">
+            Password
+            <span class="font-normal text-gray-400 text-xs">Min. 8 characters, must include at least one digit.</span>
+            <InputText @bind-Value="model.Password" type="password"
+                       class="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </label>
+
+        <button type="submit" disabled="@loading"
+                class="rounded-md bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+            @(loading ? "Creating account…" : "Register")
+        </button>
+    </EditForm>
+
+    <p class="mt-4 text-center text-sm text-gray-500">
+        Already have an account? <a href="/login" class="text-indigo-600 hover:underline">Log in</a>
+    </p>
+</div>
+
+@code {
+    private RegisterModel model = new();
+    private List<string> errors = [];
+    private bool loading;
+
+    private async Task HandleSubmit()
+    {
+        errors = [];
+        loading = true;
+
+        var (ok, regErrors) = await Auth.RegisterAsync(model.Email, model.Password);
+        if (!ok)
+        {
+            errors = regErrors;
+            loading = false;
+            return;
+        }
+
+        // Auto-login after registration
+        var (loginOk, loginError) = await Auth.LoginAsync(model.Email, model.Password);
+        if (!loginOk)
+        {
+            errors = [loginError ?? "Login after registration failed."];
+            loading = false;
+            return;
+        }
+
+        Nav.NavigateTo("/todos");
+    }
+
+    private class RegisterModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+}

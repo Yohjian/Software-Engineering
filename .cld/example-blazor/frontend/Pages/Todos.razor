@@ -1,0 +1,106 @@
+@page "/todos"
+@attribute [Authorize]
+@inject TodoService TodoSvc
+@inject NavigationManager Nav
+
+<PageTitle>Todos — MyApp</PageTitle>
+
+<div class="max-w-xl mx-auto">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">My Todos</h2>
+
+    <!-- Add new -->
+    <div class="flex gap-2 mb-8">
+        <input @bind="newTitle" @bind:event="oninput"
+               @onkeydown="HandleKeyDown"
+               placeholder="What needs doing?"
+               class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        <button @onclick="AddTodo"
+                class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            Add
+        </button>
+    </div>
+
+    @if (loadError is not null)
+    {
+        <p class="text-red-600 text-sm">@loadError</p>
+    }
+    else if (todos is null)
+    {
+        <p class="text-gray-400 text-sm">Loading…</p>
+    }
+    else if (todos.Count == 0)
+    {
+        <p class="text-center text-sm text-gray-400 py-8">No todos yet. Add one above!</p>
+    }
+    else
+    {
+        <ul class="flex flex-col gap-2">
+            @foreach (var todo in todos)
+            {
+                <li class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                    <input type="checkbox" checked="@todo.IsCompleted"
+                           @onchange="() => ToggleTodo(todo)"
+                           class="h-4 w-4 accent-indigo-600" />
+                    <span class="flex-1 text-sm @(todo.IsCompleted ? "line-through text-gray-400" : "text-gray-800")">
+                        @todo.Title
+                    </span>
+                    <button @onclick="() => DeleteTodo(todo.Id)"
+                            class="text-xs text-red-400 hover:text-red-600">
+                        Delete
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    private List<TodoItem>? todos;
+    private string newTitle = string.Empty;
+    private string? loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            todos = await TodoSvc.GetAllAsync() ?? [];
+        }
+        catch
+        {
+            loadError = "Failed to load todos.";
+        }
+    }
+
+    private async Task AddTodo()
+    {
+        if (string.IsNullOrWhiteSpace(newTitle)) return;
+        var created = await TodoSvc.CreateAsync(newTitle.Trim());
+        if (created is not null)
+        {
+            todos ??= [];
+            todos.Insert(0, created);
+            newTitle = string.Empty;
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await AddTodo();
+    }
+
+    private async Task ToggleTodo(TodoItem todo)
+    {
+        var updated = await TodoSvc.UpdateAsync(todo.Id, todo.Title, !todo.IsCompleted);
+        if (updated is not null)
+        {
+            var i = todos!.FindIndex(t => t.Id == updated.Id);
+            if (i >= 0) todos[i] = updated;
+        }
+    }
+
+    private async Task DeleteTodo(int id)
+    {
+        await TodoSvc.DeleteAsync(id);
+        todos?.RemoveAll(t => t.Id == id);
+    }
+}
